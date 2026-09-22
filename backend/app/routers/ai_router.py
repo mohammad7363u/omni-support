@@ -129,7 +129,7 @@ async def update_ai_settings(payload: AISettingsUpdate, db: AsyncSession = Depen
     resp.masked_api_key = masked_key
     return resp
 
-@router.post("/test-connection", response_model=ProviderTestResponse)
+@router.post("/test-provider", response_model=ProviderTestResponse)
 async def test_ai_connection(payload: ProviderTestRequest, db: AsyncSession = Depends(get_db)):
     """Tests live connection to the specified Base URL & API Key."""
     # If api_key in payload is masked (contains bullets), use existing stored key

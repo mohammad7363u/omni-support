@@ -7,7 +7,7 @@ from app.database import get_db
 from app.models import CannedResponse
 from app.schemas import CannedResponseCreate, CannedResponseOut
 
-router = APIRouter(prefix="/canned-responses", tags=["Canned Responses & Shortcuts"])
+router = APIRouter(prefix="/canned", tags=["Canned Responses & Shortcuts"])
 
 @router.get("", response_model=List[CannedResponseOut])
 async def list_canned_responses(db: AsyncSession = Depends(get_db)):

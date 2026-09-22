@@ -1,0 +1,839 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>تست و اعتبارسنجی OmniSupport API</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Calistoga&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&family=Vazirmatn:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --accent: #0052FF;
+      --accent-secondary: #4D7CFF;
+      --success: #10B981;
+      --danger: #EF4444;
+      --warning: #F59E0B;
+      --bg: #0F172A;
+      --surface: #1E293B;
+      --muted: #94A3B8;
+      --text: #F8FAFC;
+      --border: rgba(255,255,255,0.1);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: "Inter", "Vazirmatn", system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      direction: rtl;
+    }
+    .page-header {
+      background: linear-gradient(135deg, rgba(0,82,255,0.2) 0%, transparent 60%);
+      border-bottom: 1px solid var(--border);
+      padding: 20px 32px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .page-header h1 { font-size: 22px; font-weight: 700; }
+    .page-header p { font-size: 12.5px; color: var(--muted); margin-top: 4px; }
+    .btn-login {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      padding: 9px 20px;
+      border-radius: 8px;
+      font-size: 13px;
+      cursor: pointer;
+      font-family: inherit;
+      transition: opacity 0.15s;
+    }
+    .btn-login:hover { opacity: 0.85; }
+    .btn-login.logged-in { background: var(--success); }
+    .container { max-width: 1100px; margin: 0 auto; padding: 32px 24px; }
+
+    /* Status Bar */
+    .status-bar {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+      margin-bottom: 28px;
+    }
+    .status-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px 22px;
+      flex: 1;
+      min-width: 160px;
+    }
+    .status-card .label { font-size: 11px; color: var(--muted); margin-bottom: 6px; }
+    .status-card .val { font-size: 26px; font-weight: 800; font-family: "JetBrains Mono", monospace; }
+    .status-card .val.green { color: var(--success); }
+    .status-card .val.blue { color: var(--accent); }
+    .status-card .val.yellow { color: var(--warning); }
+    .status-card .val.red { color: var(--danger); }
+
+    /* Sections */
+    .section-title {
+      font-size: 15px;
+      font-weight: 700;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--text);
+    }
+    .section-title span {
+      background: rgba(0,82,255,0.2);
+      color: var(--accent);
+      padding: 2px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+    }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 22px;
+      margin-bottom: 22px;
+    }
+    .card h3 { font-size: 14px; font-weight: 700; margin-bottom: 16px; color: #E2E8F0; }
+
+    /* Forms */
+    .field-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 16px; }
+    .field { display: flex; flex-direction: column; gap: 5px; }
+    .field label { font-size: 12px; color: var(--muted); font-weight: 600; }
+    .field input, .field select, .field textarea {
+      background: rgba(0,0,0,0.3);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 14px;
+      color: #F8FAFC;
+      font-size: 13px;
+      font-family: "JetBrains Mono", monospace;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    .field input:focus, .field select:focus, .field textarea:focus { border-color: var(--accent); }
+    .field textarea { resize: vertical; min-height: 70px; }
+    .field.full { grid-column: span 2; }
+
+    /* Buttons */
+    .btn-row { display: flex; gap: 10px; flex-wrap: wrap; }
+    .btn {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      padding: 9px 18px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.15s;
+    }
+    .btn:hover { transform: translateY(-1px); filter: brightness(1.1); }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn.secondary { background: rgba(255,255,255,0.08); border: 1px solid var(--border); }
+    .btn.success { background: var(--success); }
+    .btn.danger { background: var(--danger); }
+    .btn.warn { background: var(--warning); color: #000; }
+    .btn.small { padding: 6px 12px; font-size: 12px; }
+
+    /* Result Blocks */
+    .result-box {
+      background: rgba(0,0,0,0.4);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px;
+      margin-top: 14px;
+      font-family: "JetBrains Mono", monospace;
+      font-size: 12px;
+      line-height: 1.7;
+      white-space: pre-wrap;
+      word-break: break-all;
+      max-height: 320px;
+      overflow-y: auto;
+      direction: ltr;
+      text-align: left;
+      display: none;
+    }
+    .result-box.show { display: block; }
+    .result-box.ok { border-color: rgba(16,185,129,0.4); color: #6EE7B7; }
+    .result-box.err { border-color: rgba(239,68,68,0.4); color: #FCA5A5; }
+
+    /* Table */
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      direction: ltr;
+      text-align: left;
+    }
+    .data-table th {
+      background: rgba(0,0,0,0.3);
+      color: var(--muted);
+      font-weight: 600;
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+      font-size: 11.5px;
+    }
+    .data-table td {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+      color: #CBD5E1;
+    }
+    .data-table tr:hover td { background: rgba(255,255,255,0.03); }
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+    .badge.green { background: rgba(16,185,129,0.2); color: #34D399; }
+    .badge.blue { background: rgba(59,130,246,0.2); color: #60A5FA; }
+    .badge.yellow { background: rgba(245,158,11,0.2); color: #FCD34D; }
+    .badge.red { background: rgba(239,68,68,0.2); color: #F87171; }
+
+    /* Script Display */
+    .script-box {
+      background: #0B1120;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 18px;
+      font-family: "JetBrains Mono", monospace;
+      font-size: 12px;
+      color: #A5F3FC;
+      line-height: 1.8;
+      white-space: pre;
+      overflow-x: auto;
+      direction: ltr;
+      text-align: left;
+      position: relative;
+    }
+    .copy-btn {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.2);
+      color: #fff;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 11px;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    .copy-btn:hover { background: var(--accent); }
+
+    /* Test Matrix */
+    .test-matrix {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 12px;
+      margin-top: 12px;
+    }
+    .test-item {
+      background: rgba(0,0,0,0.2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .test-item:hover { border-color: var(--accent); transform: translateY(-2px); }
+    .test-item .endpoint { font-family: "JetBrains Mono", monospace; font-size: 11px; color: var(--muted); margin-bottom: 4px; }
+    .test-item .desc { font-size: 13px; font-weight: 600; color: #F1F5F9; }
+    .test-item .method { font-size: 10px; font-weight: 700; display: inline-block; padding: 2px 6px; border-radius: 4px; margin-right: 6px; }
+    .method.get { background: rgba(59,130,246,0.2); color: #60A5FA; }
+    .method.post { background: rgba(16,185,129,0.2); color: #34D399; }
+    .method.put { background: rgba(245,158,11,0.2); color: #FCD34D; }
+    .method.patch { background: rgba(139,92,246,0.2); color: #A78BFA; }
+    .method.delete { background: rgba(239,68,68,0.2); color: #F87171; }
+
+    /* Toast */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      left: 24px;
+      background: #1E293B;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 18px;
+      font-size: 13px;
+      z-index: 9999;
+      animation: slideIn 0.3s ease;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    @keyframes slideIn { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+  </style>
+</head>
+<body>
+
+<div class="page-header">
+  <div>
+    <h1>⚡ تست و اعتبارسنجی OmniSupport API</h1>
+    <p>تمام APIها، اسکریپت ویجت و کلیدهای هوش مصنوعی — یکجا در یک پنل تست</p>
+  </div>
+  <button class="btn-login" id="btn-auth" onclick="toggleLogin()">🔑 ورود به سیستم</button>
+</div>
+
+<div class="container">
+
+  <!-- Quick Status -->
+  <div class="status-bar" id="status-bar">
+    <div class="status-card"><div class="label">وضعیت سرور</div><div class="val blue" id="health-val">—</div></div>
+    <div class="status-card"><div class="label">وضعیت احراز هویت</div><div class="val" id="auth-val">—</div></div>
+    <div class="status-card"><div class="label">تیکتهای فعال</div><div class="val yellow" id="active-val">—</div></div>
+    <div class="status-card"><div class="label">کارتها / اعضای تیم</div><div class="val green" id="agents-val">—</div></div>
+  </div>
+
+  <!-- Auth Section -->
+  <div class="card">
+    <div class="section-title">🔐 ۱. احراز هویت — Login / Logout</div>
+    <div class="field-grid">
+      <div class="field">
+        <label>نام کاربری (Username)</label>
+        <input type="text" id="login-user" value="admin" placeholder="admin">
+      </div>
+      <div class="field">
+        <label>کلمه عبور</label>
+        <input type="password" id="login-pass" value="admin123" placeholder="رمز عبور">
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn" onclick="doLogin()">ورود</button>
+      <button class="btn secondary" onclick="quickLogin('agent1','agent123')">ورود سریع (Agent)</button>
+      <button class="btn danger" onclick="doLogout()">خروج</button>
+    </div>
+    <div class="result-box" id="login-result"></div>
+  </div>
+
+  <!-- API Discovery -->
+  <div class="card">
+    <div class="section-title">🗂️ ۲. کشف APIها — Endpoint Matrix</div>
+    <p style="font-size:12.5px;color:#94A3B8;margin-bottom:16px;">روی هر کارت کلیک کنید تا endpoint آزمایش شود:</p>
+    <div class="test-matrix" id="test-matrix"></div>
+  </div>
+
+  <!-- Health & Info -->
+  <div class="card">
+    <div class="section-title">💓 ۳. وضعیت سرور — Health Check</div>
+    <div class="btn-row">
+      <button class="btn success" onclick="runTest('health')">بررسی وضعیت سرور</button>
+    </div>
+    <div class="result-box" id="health-result"></div>
+  </div>
+
+  <!-- Auth Me -->
+  <div class="card">
+    <div class="section-title">👤 ۴. اطلاعات کاربر فعلی (Me)</div>
+    <button class="btn" onclick="runTest('me')" id="btn-me">دریافت اطلاعات کاربر</button>
+    <div class="result-box" id="me-result"></div>
+  </div>
+
+  <!-- Conversations -->
+  <div class="card">
+    <div class="section-title">📋 ۵. تیکتها و گفتگوها — Conversations</div>
+    <div class="btn-row">
+      <button class="btn success" onclick="runTest('conversations')">لیست همه تیکتها</button>
+      <button class="btn" onclick="createConversation()">ساخت تیکت جدید</button>
+    </div>
+    <div class="result-box" id="conversations-result"></div>
+  </div>
+
+  <!-- Analytics -->
+  <div class="card">
+    <div class="section-title">📊 ۶. داشبورد آماری و SLA</div>
+    <button class="btn" onclick="runTest('analytics')">بارگذاری آمار</button>
+    <div class="result-box" id="analytics-result"></div>
+  </div>
+
+  <!-- Canned -->
+  <div class="card">
+    <div class="section-title">⚡ ۷. پاسخهای آماده (Canned Responses)</div>
+    <div class="btn-row">
+      <button class="btn success" onclick="runTest('canned')">لیست پاسخهای آماده</button>
+      <button class="btn" onclick="createCanned()">افزودن پاسخ آماده</button>
+    </div>
+    <div class="result-box" id="canned-result"></div>
+  </div>
+
+  <!-- Knowledge Base -->
+  <div class="card">
+    <div class="section-title">🧠 ۸. پایگاه دانش (Knowledge Base)</div>
+    <div class="btn-row">
+      <button class="btn success" onclick="runTest('knowledge')">لیست دانش</button>
+      <button class="btn" onclick="createKnowledge()">افزودن دانش جدید</button>
+    </div>
+    <div class="result-box" id="knowledge-result"></div>
+  </div>
+
+  <!-- AI Settings -->
+  <div class="card">
+    <div class="section-title">🤖 ۹. تنظیمات هوش مصنوعی (AI Settings)</div>
+    <div class="btn-row">
+      <button class="btn success" onclick="runTest('ai-settings')">خواندن تنظیمات</button>
+      <button class="btn warn" onclick="runTest('ai-presets')">پیشفرضهای ارائهدهنده</button>
+      <button class="btn" onclick="openAITestBox()">تست اتصال</button>
+    </div>
+    <div id="ai-test-box" style="display:none;margin-top:16px;border-top:1px solid var(--border);padding-top:16px;">
+      <div class="field-grid">
+        <div class="field">
+          <label>Base URL</label>
+          <input type="text" id="test-base-url" value="https://api.openai.com/v1" style="direction:ltr;text-align:left;">
+        </div>
+        <div class="field">
+          <label>Model Name</label>
+          <input type="text" id="test-model" value="gpt-4o-mini" style="direction:ltr;text-align:left;">
+        </div>
+        <div class="field full">
+          <label>API Key (کلید اختیاری)</label>
+          <input type="password" id="test-api-key" placeholder="sk-..." style="direction:ltr;text-align:left;">
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn" onclick="testAIConnection()">تست اتصال</button>
+      </div>
+      <div class="result-box" id="ai-test-result"></div>
+    </div>
+    <div class="result-box" id="ai-settings-result"></div>
+    <div class="result-box" id="ai-presets-result"></div>
+  </div>
+
+  <!-- Agents -->
+  <div class="card">
+    <div class="section-title">👥 ۱۰. مدیریت کارشناسان (Team)</div>
+    <div class="btn-row">
+      <button class="btn success" onclick="runTest('agents')">لیست اعضا</button>
+      <button class="btn" onclick="openAgentModal()">افزودن کارشناس</button>
+    </div>
+    <div id="agent-modal" style="display:none;margin-top:14px;background:rgba(0,0,0,0.3);border-radius:10px;padding:14px;">
+      <div class="field-grid">
+        <div class="field"><label>نام نمایشی</label><input type="text" id="agent-name" placeholder="علی محمدی"></div>
+        <div class="field"><label>نام کاربری</label><input type="text" id="agent-uname" placeholder="ali_rezaei" style="direction:ltr;"></div>
+        <div class="field"><label>کلمه عبور</label><input type="password" id="agent-pass" placeholder="رمز عبور"></div>
+        <div class="field"><label>نقش</label><select id="agent-role"><option value="agent">کارشناس</option><option value="admin">مدیر</option></select></div>
+      </div>
+      <div class="btn-row">
+        <button class="btn success" onclick="createAgent()">ایجاد</button>
+        <button class="btn secondary" onclick="document.getElementById('agent-modal').style.display='none'">انصراف</button>
+      </div>
+    </div>
+    <div class="result-box" id="agents-result"></div>
+  </div>
+
+  <!-- Sites -->
+  <div class="card">
+    <div class="section-title">🌐 ۱۱. سایتها و ویجت (Sites)</div>
+    <div class="btn-row">
+      <button class="btn success" onclick="runTest('sites')">لیست سایتها</button>
+    </div>
+    <div class="result-box" id="sites-result"></div>
+  </div>
+
+  <!-- Script Generator -->
+  <div class="card">
+    <div class="section-title">📜 ۱۲. اسکریپت ویجت (Widget Script Generator)</div>
+    <p style="font-size:12.5px;color:#94A3B8;margin-bottom:14px;">کد زیر را در انتهای قالب وبسایت خود (قبل از بسته شدن </body>) قرار دهید:</p>
+    <div class="script-box" id="widget-script">
+&lt;!-- OmniSupport Live Chat Widget --&gt;
+&lt;script src="http://localhost:8000/static/widget.js"
+  data-site-id="site_default"
+  data-api-base="http://localhost:8000"
+  defer&gt;
+&lt;/script&gt;
+      <button class="copy-btn" onclick="copyScript()">کپی</button>
+    </div>
+    <div class="btn-row" style="margin-top:12px;">
+      <div class="field" style="flex:1;">
+        <label>آدرس سرور (Server URL)</label>
+        <input type="text" id="script-server" value="http://localhost:8000" oninput="updateScript()" style="direction:ltr;text-align:left;">
+      </div>
+      <div class="field" style="flex:1;">
+        <label>Site ID</label>
+        <input type="text" id="script-siteid" value="site_default" oninput="updateScript()" style="direction:ltr;text-align:left;">
+      </div>
+    </div>
+  </div>
+
+  <!-- Full API Test Runner -->
+  <div class="card">
+    <div class="section-title">🚀 ۱۳. آزمون کامل — Full Test Run</div>
+    <p style="font-size:12.5px;color:#94A3B8;margin-bottom:14px;">تمام APIها را به ترتیب اجرا و نتیجه هرکدام را نمایش میدهد.</p>
+    <div class="btn-row">
+      <button class="btn success" onclick="runAllTests()" id="btn-runall">▶ اجرای کامل تست</button>
+      <button class="btn secondary" onclick="clearResults()">پاک کردن نتایج</button>
+    </div>
+    <div id="full-results" style="margin-top:16px;font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.9;direction:ltr;text-align:left;"></div>
+  </div>
+
+</div>
+
+<script>
+// --- State ---
+let TOKEN = localStorage.getItem('omni_token') || '';
+let USER_DATA = null;
+const BASE = ''; // relative to server
+
+// --- Init ---
+document.addEventListener('DOMContentLoaded', async () => {
+  await checkHealth();
+  if (TOKEN) updateAuthUI();
+  buildTestMatrix();
+  await refreshStatus();
+});
+
+// --- Helpers ---
+async function apiFetch(path, opts = {}) {
+  const headers = { 'Content-Type': 'application/json', ...opts.headers };
+  if (TOKEN) headers['Authorization'] = `Bearer ${TOKEN}`;
+  const res = await fetch(`${BASE}${path}`, { ...opts, headers });
+  let body;
+  try { body = await res.json(); } catch { body = await res.text(); }
+  return { status: res.status, body };
+}
+
+function showResult(id, result) {
+  const el = document.getElementById(id);
+  el.classList.add('show');
+  el.className = 'result-box ' + (result.ok ? 'ok' : 'err');
+  el.textContent = JSON.stringify(result.data, null, 2);
+}
+
+function toast(msg, type = 'info') {
+  const t = document.createElement('div');
+  t.className = 'toast';
+  t.innerHTML = `${type === 'error' ? '❌' : type === 'success' ? '✅' : 'ℹ️'} ${msg}`;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3000);
+}
+
+// --- Auth ---
+function updateAuthUI() {
+  const btn = document.getElementById('btn-auth');
+  if (TOKEN) {
+    btn.textContent = '🔑 وارد شده';
+    btn.classList.add('logged-in');
+    document.getElementById('auth-val').textContent = '✓';
+    document.getElementById('auth-val').className = 'val green';
+  } else {
+    btn.textContent = '🔑 ورود به سیستم';
+    btn.classList.remove('logged-in');
+    document.getElementById('auth-val').textContent = '✕';
+    document.getElementById('auth-val').className = 'val red';
+  }
+}
+
+async function doLogin() {
+  const u = document.getElementById('login-user').value.trim();
+  const p = document.getElementById('login-pass').value;
+  const res = await apiFetch('/api/v1/auth/login', { method: 'POST', body: JSON.stringify({ username: u, password: p }) });
+  const el = document.getElementById('login-result');
+  el.classList.add('show', 'err');
+  el.textContent = JSON.stringify(res.body, null, 2);
+  if (res.status === 200 && res.body.access_token) {
+    TOKEN = res.body.access_token;
+    USER_DATA = res.body.user;
+    localStorage.setItem('omni_token', TOKEN);
+    localStorage.setItem('omni_user', JSON.stringify(USER_DATA));
+    el.className = 'result-box ok show';
+    toast('ورود موفق!', 'success');
+    updateAuthUI();
+    await refreshStatus();
+  }
+}
+
+function quickLogin(u, p) {
+  document.getElementById('login-user').value = u;
+  document.getElementById('login-pass').value = p;
+  doLogin();
+}
+
+async function doLogout() {
+  TOKEN = '';
+  USER_DATA = null;
+  localStorage.removeItem('omni_token');
+  localStorage.removeItem('omni_user');
+  updateAuthUI();
+  document.getElementById('auth-val').textContent = '✕';
+  document.getElementById('auth-val').className = 'val red';
+  toast('از حساب خارج شدید.', 'info');
+}
+
+async function checkHealth() {
+  try {
+    const r = await fetch(`${BASE}/api/health`);
+    const d = await r.json();
+    document.getElementById('health-val').textContent = d.status === 'ok' ? '✓ Active' : '✕';
+    document.getElementById('health-val').className = 'val ' + (d.status === 'ok' ? 'green' : 'red');
+  } catch {
+    document.getElementById('health-val').textContent = '✕';
+    document.getElementById('health-val').className = 'val red';
+  }
+}
+
+async function refreshStatus() {
+  if (!TOKEN) return;
+  try {
+    const [convs, agents] = await Promise.all([
+      apiFetch('/api/v1/chat/conversations'),
+      apiFetch('/api/v1/auth/users')
+    ]);
+    const openCount = convs.body.filter(c => c.status === 'open' || c.status === 'in_progress').length;
+    document.getElementById('active-val').textContent = openCount;
+    document.getElementById('agents-val').textContent = agents.body.length;
+  } catch {}
+}
+
+// --- Test Matrix Builder ---
+function buildTestMatrix() {
+  const tests = [
+    { method: 'GET', ep: '/api/health', desc: 'سلامت سرور', auth: false },
+    { method: 'POST', ep: '/api/v1/auth/login', desc: 'احراز هویت', auth: false, body: { username: 'admin', password: 'admin123' } },
+    { method: 'GET', ep: '/api/v1/auth/me', desc: 'اطلاعات کاربر', auth: true },
+    { method: 'GET', ep: '/api/v1/chat/conversations', desc: 'لیست تیکتها', auth: true },
+    { method: 'GET', ep: '/api/v1/analytics/overview', desc: 'داشبورد آماری', auth: true },
+    { method: 'GET', ep: '/api/v1/canned', desc: 'پاسخهای آماده', auth: true },
+    { method: 'POST', ep: '/api/v1/canned', desc: 'ایجاد پاسخ آماده', auth: true, body: { title: 'تست پاسخ', shortcut: '/test', content: 'این یک پاسخ تستی است.' } },
+    { method: 'GET', ep: '/api/v1/knowledge', desc: 'پایگاه دانش', auth: true },
+    { method: 'POST', ep: '/api/v1/knowledge', desc: 'ایجاد دانش جدید', auth: true, body: { title: 'سوال تستی', content: 'پاسخ تستی برای امتحان', category: 'faq', source: 'manual' } },
+    { method: 'GET', ep: '/api/v1/ai/settings', desc: 'تنظیمات AI', auth: true },
+    { method: 'POST', ep: '/api/v1/ai/test-provider', desc: 'تست اتصال AI', auth: false, body: { base_url: 'https://api.openai.com/v1', api_key: '', model_name: 'gpt-4o-mini' } },
+    { method: 'GET', ep: '/api/v1/ai/presets', desc: 'پیشفرضهای ارائهدهنده', auth: false },
+    { method: 'GET', ep: '/api/v1/auth/users', desc: 'لیست کاربران', auth: true },
+    { method: 'POST', ep: '/api/v1/auth/users', desc: 'ایجاد کاربر جدید', auth: true, body: { username: 'testuser', display_name: 'کاربر تست', password: 'test1234', role: 'agent' } },
+    { method: 'GET', ep: '/api/v1/sites', desc: 'لیست سایتها', auth: true },
+  ];
+  const container = document.getElementById('test-matrix');
+  container.innerHTML = tests.map((t, i) => `
+    <div class="test-item" onclick="runSingleTest(${i})" title="${t.desc}">
+      <span class="method ${t.method.toLowerCase()}">${t.method}</span>
+      <div class="endpoint">${t.ep}</div>
+      <div class="desc">${t.desc}</div>
+    </div>
+  `).join('');
+  window._tests = tests;
+}
+
+async function runSingleTest(i) {
+  const t = window._tests[i];
+  const resultEl = document.createElement('div');
+  resultEl.style.cssText = 'background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px;margin-top:10px;font-family:"JetBrains Mono",monospace;font-size:12px;direction:ltr;text-align:left;';
+  resultEl.innerHTML = `<div style="color:#94A3B8;margin-bottom:8px;">در حال اجرا: <strong>${t.method} ${t.ep}</strong></div>`;
+  t._resultEl = resultEl;
+  const start = Date.now();
+  try {
+    const r = await apiFetch(t.ep, {
+      method: t.method,
+      body: t.body ? JSON.stringify(t.body) : undefined
+    });
+    const elapsed = Date.now() - start;
+    resultEl.innerHTML += `<div style="color:${r.status >= 200 && r.status < 300 ? '#34D399' : '#F87171'};">✓ ${r.status} (${elapsed}ms)</div><div style="color:#CBD5E1;margin-top:6px;word-break:break-all;">${typeof r.body === 'string' ? r.body : JSON.stringify(r.body).slice(0, 500)}</div>`;
+  } catch (e) {
+    resultEl.innerHTML += `<div style="color:#F87171;">✕ خطای شبکه: ${e.message}</div>`;
+  }
+  const matrix = document.getElementById('test-matrix');
+  matrix.after(resultEl);
+}
+
+// --- Individual Test Functions ---
+async function runTest(type) {
+  let path, body, method = 'GET', title;
+  switch (type) {
+    case 'health': path = '/api/health'; title = 'Health Check'; break;
+    case 'me': path = '/api/v1/auth/me'; title = 'Current User'; break;
+    case 'conversations': path = '/api/v1/chat/conversations'; title = 'Conversations'; break;
+    case 'analytics': path = '/api/v1/analytics/overview'; title = 'Analytics Overview'; break;
+    case 'canned': path = '/api/v1/canned'; title = 'Canned Responses'; break;
+    case 'knowledge': path = '/api/v1/knowledge'; title = 'Knowledge Base'; break;
+    case 'ai-settings': path = '/api/v1/ai/settings'; title = 'AI Settings'; break;
+    case 'ai-presets': path = '/api/v1/ai/presets'; title = 'AI Presets'; break;
+    case 'agents': path = '/api/v1/auth/users'; title = 'Agents/Users'; break;
+    case 'sites': path = '/api/v1/sites'; title = 'Sites'; break;
+    default: return;
+  }
+  const resultEl = document.getElementById(`${type}-result`) || document.getElementById('health-result');
+  const start = Date.now();
+  try {
+    const r = await apiFetch(path, { method, body: body ? JSON.stringify(body) : undefined });
+    const elapsed = Date.now() - start;
+    resultEl.classList.add('show');
+    resultEl.className = `result-box ${r.status >= 200 && r.status < 300 ? 'ok' : 'err'}`;
+    resultEl.textContent = `[${elapsed}ms] ${title}\n${JSON.stringify(r.body, null, 2)}`;
+  } catch (e) {
+    resultEl.classList.add('show');
+    resultEl.className = 'result-box err';
+    resultEl.textContent = `خطا: ${e.message}`;
+  }
+}
+
+async function createConversation() {
+  if (!TOKEN) { toast('ابتدا وارد شوید.', 'error'); return; }
+  const resultEl = document.getElementById('conversations-result');
+  const payload = {
+    site_id: 'site_default',
+    customer_id: 'cust_test_' + Date.now(),
+    customer_name: 'کاربر تست',
+    customer_email: 'test@test.com',
+    subject: 'تست API — درخواست تست',
+    priority: 'medium',
+    initial_message: 'سلام، می‌خواهم تست کنم.',
+    current_page: '/test-page'
+  };
+  resultEl.classList.add('show');
+  resultEl.className = 'result-box';
+  resultEl.textContent = 'در حال ایجاد...';
+  try {
+    const r = await apiFetch('/api/v1/chat/conversations', { method: 'POST', body: JSON.stringify(payload) });
+    resultEl.className = `result-box ${r.status >= 200 && r.status < 300 ? 'ok' : 'err'}`;
+    resultEl.textContent = JSON.stringify(r.body, null, 2);
+    await refreshStatus();
+  } catch (e) {
+    resultEl.className = 'result-box err';
+    resultEl.textContent = e.message;
+  }
+}
+
+async function createCanned() {
+  if (!TOKEN) { toast('ابتدا وارد شوید.', 'error'); return; }
+  const resultEl = document.getElementById('canned-result');
+  const payload = { title: 'پاسخ تستی ' + Date.now(), shortcut: '/t' + Date.now().toString().slice(-4), content: 'متن پاسخ تستی.' };
+  resultEl.classList.add('show');
+  resultEl.className = 'result-box';
+  resultEl.textContent = 'در حال ایجاد...';
+  try {
+    const r = await apiFetch('/api/v1/canned', { method: 'POST', body: JSON.stringify(payload) });
+    resultEl.className = `result-box ${r.status >= 200 && r.status < 300 ? 'ok' : 'err'}`;
+    resultEl.textContent = JSON.stringify(r.body, null, 2);
+  } catch (e) {
+    resultEl.className = 'result-box err';
+    resultEl.textContent = e.message;
+  }
+}
+
+async function createKnowledge() {
+  if (!TOKEN) { toast('ابتدا وارد شوید.', 'error'); return; }
+  const resultEl = document.getElementById('knowledge-result');
+  const payload = { title: 'سوال تستی ' + Date.now(), content: 'پاسخ تستی برای یادگیری.', category: 'faq', source: 'manual' };
+  resultEl.classList.add('show');
+  resultEl.className = 'result-box';
+  resultEl.textContent = 'در حال ایجاد...';
+  try {
+    const r = await apiFetch('/api/v1/knowledge', { method: 'POST', body: JSON.stringify(payload) });
+    resultEl.className = `result-box ${r.status >= 200 && r.status < 300 ? 'ok' : 'err'}`;
+    resultEl.textContent = JSON.stringify(r.body, null, 2);
+  } catch (e) {
+    resultEl.className = 'result-box err';
+    resultEl.textContent = e.message;
+  }
+}
+
+async function createAgent() {
+  if (!TOKEN) { toast('ابتدا وارد شوید.', 'error'); return; }
+  const uname = document.getElementById('agent-uname').value.trim();
+  const pass = document.getElementById('agent-pass').value.trim();
+  if (!uname || !pass) { toast('نام کاربری و رمز عبور الزامی است.', 'error'); return; }
+  const resultEl = document.getElementById('agents-result');
+  const payload = { username: uname, display_name: document.getElementById('agent-name').value.trim() || uname, password: pass, role: document.getElementById('agent-role').value };
+  resultEl.classList.add('show');
+  resultEl.className = 'result-box';
+  resultEl.textContent = 'در حال ایجاد...';
+  try {
+    const r = await apiFetch('/api/v1/auth/users', { method: 'POST', body: JSON.stringify(payload) });
+    resultEl.className = `result-box ${r.status >= 200 && r.status < 300 ? 'ok' : 'err'}`;
+    resultEl.textContent = JSON.stringify(r.body, null, 2);
+    document.getElementById('agent-modal').style.display = 'none';
+    await refreshStatus();
+  } catch (e) {
+    resultEl.className = 'result-box err';
+    resultEl.textContent = e.message;
+  }
+}
+
+async function testAIConnection() {
+  const baseUrl = document.getElementById('test-base-url').value.trim();
+  const model = document.getElementById('test-model').value.trim();
+  const apiKey = document.getElementById('test-api-key').value.trim();
+  const resultEl = document.getElementById('ai-test-result');
+  resultEl.classList.add('show');
+  resultEl.className = 'result-box';
+  resultEl.textContent = 'در حال تست اتصال...';
+  try {
+    const r = await apiFetch('/api/v1/ai/test-provider', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ base_url: baseUrl, api_key: apiKey, model_name: model })
+    });
+    resultEl.className = `result-box ${r.body.success ? 'ok' : 'err'}`;
+    resultEl.textContent = JSON.stringify(r.body, null, 2);
+  } catch (e) {
+    resultEl.className = 'result-box err';
+    resultEl.textContent = e.message;
+  }
+}
+
+function openAITestBox() { document.getElementById('ai-test-box').style.display = 'block'; }
+function openAgentModal() { document.getElementById('agent-modal').style.display = 'block'; }
+function toggleLogin() { TOKEN ? doLogout() : doLogin(); }
+
+function updateScript() {
+  const server = document.getElementById('script-server').value.trim().replace(/\/$/, '');
+  const siteId = document.getElementById('script-siteid').value.trim();
+  const code = `<!-- OmniSupport Live Chat Widget -->\n<script\n  src="${server}/static/widget.js"\n  data-site-id="${siteId}"\n  data-api-base="${server}"\n  defer>\n</script>`;
+  document.getElementById('widget-script').childNodes[0].textContent = code;
+}
+
+function copyScript() {
+  navigator.clipboard.writeText(document.getElementById('widget-script').textContent.replace('کپی', '').trim());
+  toast('کد ویجت کپی شد!', 'success');
+}
+
+// --- Full Test Run ---
+async function runAllTests() {
+  const out = document.getElementById('full-results');
+  out.innerHTML = '';
+  const steps = [
+    { name: 'Health Check', fn: async () => { const r = await fetch('/api/health'); return r.ok ? 'OK' : r.status; } },
+    { name: 'AI Presets', fn: async () => { const r = await apiFetch('/api/v1/ai/presets'); return Array.isArray(r.body) ? `${r.body.length} presets` : r.status; } },
+    { name: 'AI Settings', fn: async () => { const r = await apiFetch('/api/v1/ai/settings'); return r.ok ? 'loaded' : r.status; } },
+    { name: 'Conversations', fn: async () => { const r = await apiFetch('/api/v1/chat/conversations'); return Array.isArray(r.body) ? `${r.body.length} tickets` : r.status; } },
+    { name: 'Canned Responses', fn: async () => { const r = await apiFetch('/api/v1/canned'); return Array.isArray(r.body) ? `${r.body.length} canned` : r.status; } },
+    { name: 'Knowledge Base', fn: async () => { const r = await apiFetch('/api/v1/knowledge'); return Array.isArray(r.body) ? `${r.body.length} items` : r.status; } },
+    { name: 'Analytics', fn: async () => { const r = await apiFetch('/api/v1/analytics/overview'); return r.ok ? 'loaded' : r.status; } },
+    { name: 'Sites', fn: async () => { const r = await apiFetch('/api/v1/sites'); return Array.isArray(r.body) ? `${r.body.length} sites` : r.status; } },
+    { name: 'Auth Users', fn: async () => { const r = await apiFetch('/api/v1/auth/users'); return Array.isArray(r.body) ? `${r.body.length} users` : r.status; } },
+  ];
+  for (const step of steps) {
+    const div = document.createElement('div');
+    div.style.cssText = 'padding:8px 0;border-bottom:1px solid var(--border);color:#94A3B8;';
+    div.innerHTML = `<span>⏳</span> ${step.name}...`;
+    out.appendChild(div);
+    try {
+      const result = await step.fn();
+      const ok = typeof result === 'string' && !isNaN(parseInt(result)) === false;
+      div.innerHTML = `<span style="color:${ok ? '#34D399' : '#F87171'};">${ok ? '✓' : '✕'}</span> ${step.name}: <strong style="color:#F1F5F9;">${result}</strong>`;
+    } catch (e) {
+      div.innerHTML = `<span style="color:#F87171;">✕</span> ${step.name}: <strong style="color:#F87171;">${e.message}</strong>`;
+    }
+    await new Promise(r => setTimeout(r, 300));
+  }
+}
+
+function clearResults() {
+  document.querySelectorAll('.result-box').forEach(el => { el.classList.remove('show'); el.textContent = ''; });
+  document.getElementById('full-results').innerHTML = '';
+  document.querySelectorAll('.result-box').forEach(el => el.remove());
+}
+</script>
+
+</body>
+</html>

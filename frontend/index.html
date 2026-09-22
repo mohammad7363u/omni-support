@@ -138,6 +138,13 @@
                   <span>🤖 خلاصه هوشمند</span>
                 </button>
 
+                <!-- AI Mode Selector -->
+                <select id="select-ticket-ai-mode" class="ticket-select" title="تنظیم هوش مصنوعی">
+                  <option value="auto">🤖 هوش مصنوعی: فعال</option>
+                  <option value="copilot">💡 هوش مصنوعی: فقط پیشنهاد</option>
+                  <option value="human_only">🧑 پشتیبانی انسانی</option>
+                </select>
+
                 <!-- Priority Selector -->
                 <select id="select-ticket-priority" class="ticket-select" title="تغییر اولویت">
                   <option value="low">اولویت کم</option>
@@ -713,6 +720,10 @@
   <div class="toast-container" id="toast-container"></div>
 
   <!-- Core Scripts -->
+  <script>
+    window.API_BASE = '';
+    window.state = { agentSocket: null, activeConversationId: null, conversations: [], activeConversation: null, aiSettings: null, sites: [], knowledgeItems: [] };
+  </script>
   <script src="/frontend/js/app.js"></script>
 </body>
 </html>

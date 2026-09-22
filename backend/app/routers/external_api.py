@@ -6,7 +6,7 @@ from typing import Optional
 from app.database import get_db
 from app.models import Site, Conversation, Message
 from app.schemas import ExternalMessageRequest, ConversationResponse, MessageResponse
-from app.routers.chat import send_message
+from app.routers.chat import send_message, generate_ticket_number
 from app.schemas import MessageCreate
 
 router = APIRouter(prefix="/external", tags=["External REST API"])
@@ -46,13 +46,17 @@ async def create_external_ticket(
     conv = (await db.execute(stmt)).scalars().first()
 
     if not conv:
+        ticket_num = await generate_ticket_number(db)
         conv = Conversation(
             site_id=site.id,
             customer_id=payload.customer_id,
             customer_name=payload.customer_name or "کاربر بیرونی",
             customer_email=payload.customer_email,
             current_page=payload.current_page,
-            status="active",
+            ticket_number=ticket_num,
+            subject=payload.subject or f"درخواست پشتیبانی #{ticket_num}",
+            status="open",
+            priority=payload.priority or "medium",
             ai_mode="auto"
         )
         db.add(conv)

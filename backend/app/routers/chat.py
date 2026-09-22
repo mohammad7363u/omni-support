@@ -279,6 +279,50 @@ async def assign_ticket_to_agent(
 
     return conv
 
+@router.patch("/conversations/{conversation_id}/ai-mode", response_model=ConversationResponse)
+async def update_ticket_ai_mode(
+    conversation_id: str,
+    payload: TicketPriorityUpdateRequest,
+    db: AsyncSession = Depends(get_db)
+):
+    """Updates the AI assistance mode for a ticket: 'auto', 'copilot', or 'human_only'."""
+    stmt = (
+        select(Conversation)
+        .options(
+            selectinload(Conversation.messages),
+            selectinload(Conversation.activities),
+            selectinload(Conversation.attachments)
+        )
+        .where(Conversation.id == conversation_id)
+    )
+    conv = (await db.execute(stmt)).scalars().first()
+    if not conv:
+        raise HTTPException(status_code=404, detail="تیکت یافت نشد.")
+
+    valid_modes = {"auto", "copilot", "human_only"}
+    new_mode = payload.priority if payload.priority in valid_modes else conv.ai_mode
+    old_mode = conv.ai_mode
+    conv.ai_mode = new_mode
+
+    activity = TicketActivity(
+        conversation_id=conv.id,
+        actor_type="agent",
+        actor_name="پشتیبان",
+        action="ai_mode_change",
+        details=f"حالت هوش مصنوعی از '{old_mode}' به '{new_mode}' تغییر یافت."
+    )
+    db.add(activity)
+    await db.commit()
+    await db.refresh(conv)
+
+    await ws_manager.broadcast_to_agents("ticket_updated", {
+        "id": conv.id,
+        "ai_mode": conv.ai_mode
+    })
+
+    return conv
+
+
 @router.post("/conversations/{conversation_id}/status", response_model=ConversationResponse)
 async def update_ticket_status(
     conversation_id: str,

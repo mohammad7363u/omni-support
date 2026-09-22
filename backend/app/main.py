@@ -226,6 +226,13 @@ async def serve_widget_demo():
         return FileResponse(demo_file)
     return {"error": "Demo file not found"}
 
+@app.get("/test-panel")
+async def serve_test_panel():
+    panel_file = os.path.join(frontend_dir, "test_panel.html")
+    if os.path.exists(panel_file):
+        return FileResponse(panel_file)
+    return {"error": "Test panel not found"}
+
 @app.get("/")
 async def serve_dashboard():
     index_file = os.path.join(frontend_dir, "index.html")

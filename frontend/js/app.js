@@ -9,6 +9,12 @@ let currentUser = null;
 let activeFilter = 'all';
 let isInternalComposerMode = false;
 let agentSocket = null;
+// Track recently rendered message IDs to prevent double-render from WS + API race
+const _renderedMsgIds = new Set();
+function markMsgRendered(msgId) { _renderedMsgIds.add(msgId); }
+function isMsgAlreadyRendered(msgId) { return _renderedMsgIds.has(msgId); }
+// Clean up old entries periodically
+setInterval(() => { _renderedMsgIds.clear(); }, 5000);
 
 document.addEventListener("DOMContentLoaded", async () => {
   // Check auth
@@ -257,6 +263,7 @@ async function selectConversation(convId) {
     if (!res.ok) return;
 
     currentConversation = await res.json();
+    _renderedMsgIds.clear(); // clear old markers so new WS messages render
     renderConversationsList(); // refresh active highlight
 
     // Header updates
@@ -268,6 +275,7 @@ async function selectConversation(convId) {
     document.getElementById("select-ticket-priority").value = currentConversation.priority || "medium";
     document.getElementById("select-ticket-status").value = currentConversation.status || "open";
     document.getElementById("select-ticket-agent").value = currentConversation.assigned_agent_id || "";
+    document.getElementById("select-ticket-ai-mode").value = currentConversation.ai_mode || "auto";
 
     // SLA display
     const slaEl = document.getElementById("active-sla-status");
@@ -403,7 +411,6 @@ function initTicketActions() {
       });
       if (res.ok) {
         showToast("تیکت با موفقیت به کارشناس واگذار شد.", "success");
-        await selectConversation(currentConversation.id);
         await loadConversations();
       }
     } catch (err) {
@@ -425,7 +432,6 @@ function initTicketActions() {
       });
       if (res.ok) {
         showToast(`وضعیت تیکت به ${newStatus} تغییر یافت.`, "info");
-        await selectConversation(currentConversation.id);
         await loadConversations();
       }
     } catch (err) {
@@ -447,7 +453,6 @@ function initTicketActions() {
       });
       if (res.ok) {
         showToast(`اولویت تیکت تغییر یافت.`, "info");
-        await selectConversation(currentConversation.id);
         await loadConversations();
       }
     } catch (err) {
@@ -480,6 +485,29 @@ function initTicketActions() {
     }
   });
 
+  // 4. Change AI Mode
+  const selectAiMode = document.getElementById("select-ticket-ai-mode");
+  selectAiMode.addEventListener("change", async () => {
+    if (!currentConversation) return;
+    const newMode = selectAiMode.value;
+    try {
+      const res = await fetch(`/api/v1/chat/conversations/${currentConversation.id}/ai-mode`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ priority: newMode })
+      });
+      if (res.ok) {
+        currentConversation.ai_mode = newMode;
+        const labels = { auto: "🤖 هوش مصنوعی: فعال", copilot: "💡 هوش مصنوعی: فقط پیشنهاد", human_only: "🧑 پشتیبانی انسانی" };
+        selectAiMode.textContent = labels[newMode] || newMode;
+        showToast(newMode === "human_only" ? "تیکت به حالت پشتیبانی انسانی رفت — AI دیگر پاسخ نمی‌دهد." : "تنظیم هوش مصنوعی بروزرسانی شد.", "info");
+        await loadConversations();
+      }
+    } catch (err) {
+      showToast("خطا در تغییر حالت: " + err.message, "error");
+    }
+  });
+
   // 5. Learn from Agent response button
   document.getElementById("btn-learn-from-this-ticket").addEventListener("click", async () => {
     if (!currentConversation || !currentConversation.messages || currentConversation.messages.length === 0) {
@@ -509,7 +537,7 @@ function initTicketActions() {
       });
       if (res.ok) {
         showToast("پاسخ شما در پایگاه یادگیری هوش مصنوعی ذخیره شد!", "success");
-        await selectConversation(currentConversation.id);
+        await loadConversations();
       }
     } catch (err) {
       showToast("خطا در ذخیره یادگیری: " + err.message, "error");
@@ -592,7 +620,8 @@ async function sendComposerMessage() {
       body = { content: content };
     }
 
-    const res = await fetch(url, {
+    // Mark this conversation as just-sent to suppress duplicate WS render
+const res = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body)
@@ -600,7 +629,12 @@ async function sendComposerMessage() {
 
     if (res.ok) {
       textarea.value = "";
-      await selectConversation(currentConversation.id);
+      // Mark all messages in this conversation as already-rendered to suppress WS duplicate
+      if (currentConversation && currentConversation.messages) {
+        currentConversation.messages.forEach(m => markMsgRendered(m.id));
+      }
+      // The server WS will push new_message; we let it render naturally.
+      // Only refresh the sidebar list, NOT the active feed (avoid double-render).
       await loadConversations();
     }
   } catch (err) {
@@ -631,10 +665,16 @@ function initWebSockets() {
           loadConversations();
           showToast(`تیکت جدید: ${data.ticket_number || ''} از ${data.customer_name}`, "info");
         } else if (evtType === "new_message") {
-          if (currentConversation && currentConversation.id === data.conversation_id) {
-            selectConversation(currentConversation.id);
-          } else {
+          // Skip if this message was already rendered by our API call (prevents double-render)
+          if (data.id && isMsgAlreadyRendered(data.id)) {
+            // Message already shown — just refresh the sidebar list
             loadConversations();
+          } else {
+            if (currentConversation && currentConversation.id === data.conversation_id) {
+              selectConversation(currentConversation.id);
+            } else {
+              loadConversations();
+            }
           }
         } else if (evtType === "ticket_updated") {
           if (currentConversation && currentConversation.id === data.id) {
