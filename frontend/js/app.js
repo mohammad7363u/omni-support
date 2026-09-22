@@ -9,12 +9,8 @@ let currentUser = null;
 let activeFilter = 'all';
 let isInternalComposerMode = false;
 let agentSocket = null;
-// Track recently rendered message IDs to prevent double-render from WS + API race
-const _renderedMsgIds = new Set();
-function markMsgRendered(msgId) { _renderedMsgIds.add(msgId); }
-function isMsgAlreadyRendered(msgId) { return _renderedMsgIds.has(msgId); }
-// Clean up old entries periodically
-setInterval(() => { _renderedMsgIds.clear(); }, 5000);
+// Simple debounce: suppress WS feed re-render for 1s after our own send
+let _suppressWSFeed = false;
 
 document.addEventListener("DOMContentLoaded", async () => {
   // Check auth
@@ -263,7 +259,6 @@ async function selectConversation(convId) {
     if (!res.ok) return;
 
     currentConversation = await res.json();
-    _renderedMsgIds.clear(); // clear old markers so new WS messages render
     renderConversationsList(); // refresh active highlight
 
     // Header updates
@@ -629,12 +624,10 @@ const res = await fetch(url, {
 
     if (res.ok) {
       textarea.value = "";
-      // Mark all messages in this conversation as already-rendered to suppress WS duplicate
-      if (currentConversation && currentConversation.messages) {
-        currentConversation.messages.forEach(m => markMsgRendered(m.id));
-      }
-      // The server WS will push new_message; we let it render naturally.
-      // Only refresh the sidebar list, NOT the active feed (avoid double-render).
+      // Suppress WS feed re-render for 1 second — the server will push new_message via WS
+      _suppressWSFeed = true;
+      setTimeout(() => { _suppressWSFeed = false; }, 1200);
+      // Just refresh the sidebar list; the WS will update the feed automatically.
       await loadConversations();
     }
   } catch (err) {
@@ -665,10 +658,10 @@ function initWebSockets() {
           loadConversations();
           showToast(`تیکت جدید: ${data.ticket_number || ''} از ${data.customer_name}`, "info");
         } else if (evtType === "new_message") {
-          // Skip if this message was already rendered by our API call (prevents double-render)
-          if (data.id && isMsgAlreadyRendered(data.id)) {
-            // Message already shown — just refresh the sidebar list
-            loadConversations();
+          // If we just sent this message ourselves, skip the feed re-render
+          // to prevent the message from appearing twice.
+          if (_suppressWSFeed) {
+            loadConversations(); // only update the sidebar
           } else {
             if (currentConversation && currentConversation.id === data.conversation_id) {
               selectConversation(currentConversation.id);
