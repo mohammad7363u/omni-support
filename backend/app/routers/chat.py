@@ -30,9 +30,29 @@ async def generate_ticket_number(db: AsyncSession) -> str:
     cfg = (await db.execute(cfg_stmt)).scalars().first()
     prefix = cfg.ticket_prefix if cfg and cfg.ticket_prefix else "HD"
 
-    count_stmt = select(func.count(Conversation.id))
-    count = (await db.execute(count_stmt)).scalar() or 0
-    return f"{prefix}-{1001 + count}"
+    # Start from max existing ticket number + 1
+    stmt = select(func.max(Conversation.ticket_number)).where(
+        Conversation.ticket_number.like(f"{prefix}-%")
+    )
+    max_val = (await db.execute(stmt)).scalar_one_or_none()
+    next_num = 1001
+    if max_val:
+        try:
+            next_num = int(max_val.split("-")[-1]) + 1
+        except (ValueError, IndexError):
+            pass
+
+    # Retry with incrementing numbers if there's a uniqueness conflict
+    for attempt in range(next_num, next_num + 100):
+        candidate = f"{prefix}-{attempt}"
+        exists = (await db.execute(
+            select(func.count(Conversation.id)).where(Conversation.ticket_number == candidate)
+        )).scalar_one_or_none()
+        if exists == 0:
+            return candidate
+
+    # Fallback (should never reach here)
+    return f"{prefix}-9999"
 
 def detect_sentiment_and_priority(text: str) -> tuple[str, str]:
     """Analyzes customer tone to classify sentiment and auto-suggest priority."""
@@ -300,7 +320,9 @@ async def update_ticket_ai_mode(
         raise HTTPException(status_code=404, detail="تیکت یافت نشد.")
 
     valid_modes = {"auto", "copilot", "human_only"}
-    new_mode = payload.priority if payload.priority in valid_modes else conv.ai_mode
+    new_mode = payload.priority
+    if new_mode not in valid_modes:
+        raise HTTPException(status_code=400, detail=f"حالت نامعتبر: {new_mode}. مقادیر مجاز: {', '.join(valid_modes)}")
     old_mode = conv.ai_mode
     conv.ai_mode = new_mode
 

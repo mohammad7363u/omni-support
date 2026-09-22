@@ -44,6 +44,11 @@ async def run_installer(payload: InstallerRequest, db: AsyncSession = Depends(ge
         raise HTTPException(status_code=400, detail="سامانه قبلاً با موفقیت نصب و راه‌اندازی شده است.")
 
     # 1. Create / Update Admin Account
+    existing_user = select(Agent).where(Agent.username == payload.admin_username.strip())
+    duplicate = (await db.execute(existing_user)).scalars().first()
+    if duplicate:
+        raise HTTPException(status_code=400, detail="نام کاربری وارد شده قبلاً ثبت شده است.")
+    
     stmt = select(Agent).where(Agent.username == payload.admin_username.strip())
     admin_user = (await db.execute(stmt)).scalars().first()
     if not admin_user:

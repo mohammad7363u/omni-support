@@ -74,6 +74,10 @@ async def customer_reply_from_portal(
     conv = (await db.execute(stmt)).scalars().first()
     if not conv:
         raise HTTPException(status_code=404, detail="تیکت یافت نشد.")
+    
+    # Only allow replies on open/in_progress tickets
+    if conv.status in ("resolved", "closed"):
+        raise HTTPException(status_code=400, detail="این تیکت بسته شده و دیگر پاسخ قبول نمیکند.")
 
     payload.sender_type = "customer"
     payload.sender_name = conv.customer_name

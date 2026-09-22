@@ -47,7 +47,7 @@ async def get_analytics_overview(db: AsyncSession = Depends(get_db)):
 
     avg_latency = (await db.execute(select(func.avg(TypeSafeDecisionLog.latency_ms)))).scalar() or 185
     total_d = sum(display_breakdown.values())
-    ai_resolved_pct = round((auto_count / total_d) * 100, 1)
+    ai_resolved_pct = round((auto_count / total_d) * 100, 1) if total_d > 0 else 0.0
 
     return AnalyticsOverviewResponse(
         total_conversations=total_convs or 12,
