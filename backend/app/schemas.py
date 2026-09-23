@@ -1,5 +1,5 @@
 from __future__ import annotations
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, validator
 from typing import Optional, List, Dict, Any
 from datetime import datetime
 from enum import Enum
@@ -74,6 +74,11 @@ class LoginRequest(BaseModel):
     username: str
     password: str
 
+    class Config:
+        json_schema_extra = {
+            "example": {"username": "admin", "password": "admin123"}
+        }
+
 class LoginResponse(BaseModel):
     success: bool
     access_token: str
@@ -86,6 +91,18 @@ class UserCreate(BaseModel):
     email: Optional[str] = ""
     password: str
     role: str = "agent"
+
+    @validator('username')
+    def validate_username(cls, v):
+        if len(v) < 3:
+            raise ValueError('Username must be at least 3 characters')
+        return v.strip()
+
+    @validator('password')
+    def validate_password(cls, v):
+        if len(v) < 6:
+            raise ValueError('Password must be at least 6 characters')
+        return v
 
 class UserUpdate(BaseModel):
     display_name: Optional[str] = None

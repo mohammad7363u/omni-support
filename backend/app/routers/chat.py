@@ -842,6 +842,20 @@ async def learn_from_agent(
 # --- WebSockets ---
 @router.websocket("/ws/agent")
 async def websocket_agent_endpoint(websocket: WebSocket):
+    # Extract and verify token from query params
+    token = websocket.query_params.get("token")
+    if not token:
+        await websocket.close(code=1008, reason="Authentication required")
+        return
+
+    # Simple token validation (in production, use proper JWT verification)
+    from app.core.security import decode_access_token
+    from app.config import settings
+    payload = decode_access_token(token, settings.SECRET_KEY)
+    if not payload or "sub" not in payload:
+        await websocket.close(code=1008, reason="Invalid token")
+        return
+
     await ws_manager.connect_agent(websocket)
     try:
         while True:
@@ -851,6 +865,7 @@ async def websocket_agent_endpoint(websocket: WebSocket):
 
 @router.websocket("/ws/chat/{conversation_id}")
 async def websocket_customer_endpoint(websocket: WebSocket, conversation_id: str):
+    # Allow customer connections without auth (public portal)
     await ws_manager.connect_customer(conversation_id, websocket)
     try:
         while True:

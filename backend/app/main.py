@@ -81,7 +81,7 @@ async def seed_initial_data():
                 username="admin",
                 display_name="مدیر ارشد سیستم (Admin)",
                 email="admin@omni-support.local",
-                password_hash=hash_password("admin123"),
+                password_hash=hash_password(os.getenv("DEFAULT_ADMIN_PASSWORD", "admin123")),
                 role="admin",
                 is_active=True,
                 is_online=True
@@ -95,7 +95,7 @@ async def seed_initial_data():
                 username="agent1",
                 display_name="سارا حسینی (پشتیبان فنی)",
                 email="sara@omni-support.local",
-                password_hash=hash_password("agent123"),
+                password_hash=hash_password(os.getenv("DEFAULT_AGENT_PASSWORD", "agent123")),
                 role="agent",
                 is_active=True,
                 is_online=True
@@ -186,11 +186,10 @@ async def add_security_headers(request, call_next):
 origins = [
     "http://localhost:8000",
     "http://127.0.0.1:8000",
-    "http://localhost:3000",
-    "http://localhost:3001",
 ]
-if os.getenv("ALLOWED_ORIGINS"):
-    origins.extend(os.getenv("ALLOWED_ORIGINS", "").split(","))
+allowed_origins = os.getenv("ALLOWED_ORIGINS", "")
+if allowed_origins:
+    origins.extend([o.strip() for o in allowed_origins.split(",") if o.strip()])
 
 app.add_middleware(
     CORSMiddleware,
