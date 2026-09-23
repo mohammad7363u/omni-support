@@ -292,7 +292,6 @@ class KnowledgeItemResponse(BaseModel):
         from_attributes = True
 
 class LearnFromAgentRequest(BaseModel):
-    conversation_id: str
     customer_question: str
     agent_answer: str
     title: Optional[str] = None

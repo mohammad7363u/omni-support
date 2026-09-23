@@ -31,6 +31,7 @@ async def check_installer_status(db: AsyncSession = Depends(get_db)):
         company_name=cfg.company_name or "سامانه پشتیبانی",
         company_industry=cfg.company_industry or "ecommerce",
         ai_tone=cfg.ai_tone or "friendly",
+        ticket_prefix=cfg.ticket_prefix or "HD",
         installed_at=cfg.installed_at,
         agents_count=agents_count
     )
@@ -44,31 +45,22 @@ async def run_installer(payload: InstallerRequest, db: AsyncSession = Depends(ge
         raise HTTPException(status_code=400, detail="سامانه قبلاً با موفقیت نصب و راه‌اندازی شده است.")
 
     # 1. Create / Update Admin Account
-    existing_user = select(Agent).where(Agent.username == payload.admin_username.strip())
-    duplicate = (await db.execute(existing_user)).scalars().first()
-    if duplicate:
-        raise HTTPException(status_code=400, detail="نام کاربری وارد شده قبلاً ثبت شده است.")
-    
     stmt = select(Agent).where(Agent.username == payload.admin_username.strip())
     admin_user = (await db.execute(stmt)).scalars().first()
-    if not admin_user:
-        admin_user = Agent(
-            username=payload.admin_username.strip(),
-            display_name=payload.admin_display_name.strip(),
-            email=payload.admin_email.strip(),
-            password_hash=hash_password(payload.admin_password),
-            role="admin",
-            is_active=True,
-            is_online=True,
-            last_login=datetime.now(timezone.utc)
-        )
-        db.add(admin_user)
-    else:
-        admin_user.password_hash = hash_password(payload.admin_password)
-        admin_user.display_name = payload.admin_display_name
-        admin_user.email = payload.admin_email
-        admin_user.role = "admin"
-        admin_user.last_login = datetime.now(timezone.utc)
+    if admin_user:
+        raise HTTPException(status_code=400, detail="نام کاربری وارد شده قبلاً ثبت شده است.")
+
+    admin_user = Agent(
+        username=payload.admin_username.strip(),
+        display_name=payload.admin_display_name.strip(),
+        email=payload.admin_email.strip(),
+        password_hash=hash_password(payload.admin_password),
+        role="admin",
+        is_active=True,
+        is_online=True,
+        last_login=datetime.now(timezone.utc)
+    )
+    db.add(admin_user)
 
     # 2. Setup System Prompt based on Onboarding Questions
     tone_desc = "صمیمی، گرم، همدلانه و در عین حال کاملاً محترمانه"
