@@ -58,7 +58,7 @@
           <span>اتصال به سایت و ویجت</span>
         </a>
 
-        <a class="nav-item" href="/portal" target="_blank" style="color: #38bdf8;">
+        <a class="nav-item" href="/portal" target="_blank" style="color: var(--info);">
           <svg viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
           <span>پورتال مشتریان ↗</span>
         </a>
@@ -75,7 +75,7 @@
             <p id="current-agent-role">مدیر سیستم (Admin)</p>
           </div>
         </div>
-        <button id="btn-logout" title="خروج از حساب" style="background: none; border: none; color: #94a3b8; cursor: pointer; padding: 4px;">
+        <button id="btn-logout" title="خروج از حساب" style="background: none; border: none; color: var(--sidebar-text-muted); cursor: pointer; padding: 4px;">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
         </button>
       </div>
@@ -95,7 +95,7 @@
             <div class="conv-list-header">
               <h3>
                 <span>صندوق تیکت‌ها</span>
-                <span style="font-size: 11px; background: #e0e7ff; color: #4338ca; padding: 2px 8px; border-radius: 12px;" id="total-tickets-count">0 تیکت</span>
+                <span style="font-size: 11px; background: var(--indigo-50); color: var(--indigo-700); padding: 2px 8px; border-radius: 12px;" id="total-tickets-count">0 تیکت</span>
               </h3>
               
               <!-- Filter Tabs (Frappe Style) -->
@@ -128,7 +128,7 @@
                 <div class="ticket-header-meta">
                   <span>مشتری: <strong id="active-customer-name">مهدی صادقی</strong></span>
                   <span>•</span>
-                  <span id="active-sla-status" style="color: #ef4444; font-weight: 700;">مهلت SLA: ۲ ساعت (بحرانی)</span>
+                  <span id="active-sla-status" style="color: var(--danger); font-weight: 700;">مهلت SLA: ۲ ساعت (بحرانی)</span>
                 </div>
               </div>
 
@@ -198,7 +198,7 @@
                 <textarea id="agent-reply-input" class="chat-textarea" rows="2" placeholder="متن پیام خود را بنویسید (برای ارسال Ctrl+Enter بزنید)..."></textarea>
                 
                 <div class="composer-actions-row">
-                  <div style="font-size: 11px; color: #94a3b8;" id="composer-hint">
+                  <div style="font-size: 11px; color: var(--sidebar-text-muted);" id="composer-hint">
                     پیام شما به عنوان پاسخ رسمی برای کاربر ارسال می‌شود.
                   </div>
                   <button class="btn-send-agent" id="btn-send-agent-reply">
@@ -226,7 +226,7 @@
 
               <div class="property-row">
                 <span class="property-label">تصمیم TypeSafe:</span>
-                <span id="inspect-decision" style="font-weight: 700; color: #4f46e5;">AUTO_ANSWER</span>
+                <span id="inspect-decision" style="font-weight: 700; color: var(--accent);">AUTO_ANSWER</span>
               </div>
 
               <div class="property-row">
@@ -323,14 +323,14 @@
           
           <!-- Inverted Contrast Hero Section (Design System DNA) -->
           <div class="analytics-hero-card">
-            <div class="section-badge" style="background: rgba(0, 82, 255, 0.2); border-color: rgba(0, 82, 255, 0.5); color: #60A5FA;">
-              <span class="pulsing-dot" style="background-color: #60A5FA; box-shadow: 0 0 10px #60A5FA;"></span>
+            <div class="section-badge" style="background: var(--accent-light); border-color: var(--accent-border); color: var(--accent-secondary);">
+              <span class="pulsing-dot" style="background-color: var(--accent-secondary); box-shadow: 0 0 10px var(--accent-secondary);"></span>
               <span>LIVE METRICS & SLA INTELLIGENCE</span>
             </div>
             <h2 style="font-family: var(--font-display); font-size: 28px; margin-top: 10px; color: #FFFFFF;">
               داشبورد نظارت و عملکرد <span class="gradient-text">OmniSupport</span>
             </h2>
-            <p style="font-size: 13.5px; color: #94A3B8; margin-top: 6px; max-width: 640px; line-height: 1.6;">
+            <p style="font-size: 13.5px; color: var(--sidebar-text-muted); margin-top: 6px; max-width: 640px; line-height: 1.6;">
               پایش بلادرنگ تعهدات پاسخ‌گویی (SLA)، نرخ تفکیک خودکار هوش مصنوعی، و توزیع تصمیمات چهارگانه موتور TypeSafe
             </p>
           </div>
@@ -375,9 +375,9 @@
 
             <div class="decision-grid-4">
               <div class="decision-card featured">
-                <span class="decision-card-title" style="color: #16A34A;">AUTO_ANSWER</span>
-                <div class="decision-card-val" style="color: #15803D;" id="stat-action-auto">0</div>
-                <span style="font-size: 11.5px; color: #166534; font-weight: 500;">پاسخ آنی خودکار</span>
+                <span class="decision-card-title" style="color: var(--green-600);">AUTO_ANSWER</span>
+                <div class="decision-card-val" style="color: var(--green-700);" id="stat-action-auto">0</div>
+                <span style="font-size: 11.5px; color: var(--green-800); font-weight: 500;">پاسخ آنی خودکار</span>
               </div>
 
               <div class="decision-card">
@@ -387,14 +387,14 @@
               </div>
 
               <div class="decision-card">
-                <span class="decision-card-title" style="color: #EA580C;">TRANSFER_TO_HUMAN</span>
-                <div class="decision-card-val" style="color: #C2410C;" id="stat-action-transfer">0</div>
+                <span class="decision-card-title" style="color: var(--orange-500);">TRANSFER_TO_HUMAN</span>
+                <div class="decision-card-val" style="color: var(--orange-700);" id="stat-action-transfer">0</div>
                 <span style="font-size: 11.5px; color: var(--muted-foreground);">ارجاع فوری انسانی</span>
               </div>
 
               <div class="decision-card">
-                <span class="decision-card-title" style="color: #64748B;">CLARIFY</span>
-                <div class="decision-card-val" style="color: #334155;" id="stat-action-clarify">0</div>
+                <span class="decision-card-title" style="color: var(--slate-500);">CLARIFY</span>
+                <div class="decision-card-val" style="color: var(--slate-700);" id="stat-action-clarify">0</div>
                 <span style="font-size: 11.5px; color: var(--muted-foreground);">درخواست توضیح تکمیلی</span>
               </div>
             </div>

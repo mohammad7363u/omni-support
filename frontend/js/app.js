@@ -276,10 +276,10 @@ async function selectConversation(convId) {
     const slaEl = document.getElementById("active-sla-status");
     if (currentConversation.priority === "urgent") {
       slaEl.textContent = "مهلت SLA: ۲ ساعت (بحرانی)";
-      slaEl.style.color = "#ef4444";
+      slaEl.style.color = "var(--danger)";
     } else {
       slaEl.textContent = "مهلت SLA: استاندارد (۸ ساعت)";
-      slaEl.style.color = "#6366f1";
+      slaEl.style.color = "var(--indigo-500)";
     }
 
     // Render Feed (Messages + Timeline)
