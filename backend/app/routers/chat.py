@@ -1,7 +1,9 @@
+import csv
+import io
 import uuid
 from datetime import datetime, timezone, timedelta
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect, Query
+from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect, Query, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, desc, func, or_
 from sqlalchemy.orm import selectinload
@@ -756,6 +758,79 @@ async def learn_from_agent(
     })
 
     return item
+
+@router.post("/conversations/bulk-update")
+async def bulk_update_conversations(
+    payload: TicketBulkUpdateRequest,
+    db: AsyncSession = Depends(get_db)
+):
+    """Bulk update ticket status/priority/assignment."""
+    updated = 0
+    for tid in payload.ticket_ids:
+        stmt = select(Conversation).where(Conversation.id == tid)
+        conv = (await db.execute(stmt)).scalars().first()
+        if not conv:
+            continue
+        if payload.status:
+            old_status = conv.status
+            conv.status = payload.status
+            db.add(TicketActivity(
+                conversation_id=conv.id,
+                actor_type="agent",
+                actor_name="批量操作",
+                action="status_change",
+                details=f"批量操作：状态从 '{old_status}' 改为 '{payload.status}'"
+            ))
+        if payload.priority:
+            conv.priority = payload.priority
+        if payload.assigned_agent_id:
+            conv.assigned_agent_id = payload.assigned_agent_id
+            agent_stmt = select(Agent).where(Agent.id == payload.assigned_agent_id)
+            agent = (await db.execute(agent_stmt)).scalars().first()
+            conv.assigned_agent_name = agent.display_name if agent else ""
+        updated += 1
+    await db.commit()
+    return {"updated": updated}
+
+@router.get("/conversations/export")
+async def export_conversations(
+    format: str = "csv",
+    status: Optional[str] = None,
+    db: AsyncSession = Depends(get_db)
+):
+    """Export tickets as CSV or JSON."""
+    stmt = (
+        select(Conversation)
+        .options(selectinload(Conversation.messages))
+        .order_by(desc(Conversation.last_message_at))
+    )
+    if status:
+        stmt = stmt.where(Conversation.status == status)
+    res = await db.execute(stmt)
+    convs = res.scalars().all()
+
+    if format == "json":
+        from fastapi.responses import JSONResponse
+        data = [{
+            "id": c.id, "ticket_number": c.ticket_number,
+            "subject": c.subject, "customer_name": c.customer_name,
+            "status": c.status, "priority": c.priority,
+            "sentiment": c.sentiment, "created_at": str(c.created_at)
+        } for c in convs]
+        return JSONResponse(content={"count": len(data), "tickets": data})
+
+    # CSV export
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["ticket_number", "subject", "customer_name", "status", "priority",
+                      "sentiment", "assigned_agent_name", "created_at", "last_message"])
+    for c in convs:
+        last_msg = c.messages[-1].content if c.messages else ""
+        writer.writerow([c.ticket_number, c.subject, c.customer_name, c.status,
+                         c.priority, c.sentiment, c.assigned_agent_name or "",
+                         str(c.created_at), last_msg[:200]])
+    return Response(content=output.getvalue(), media_type="text/csv",
+                    headers={"Content-Disposition": f"attachment; filename=export_{datetime.now(timezone.utc).strftime('%Y%m%d')}.csv"})
 
 # --- WebSockets ---
 @router.websocket("/ws/agent")

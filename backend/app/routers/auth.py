@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, desc
 from typing import List
@@ -10,11 +10,14 @@ from app.schemas import LoginRequest, LoginResponse, UserCreate, UserUpdate, Use
 from app.core.security import hash_password, verify_password, create_access_token
 from app.config import settings
 from app.core.deps import get_current_user, get_current_admin
+from app.rate_limiter import LOGIN_LIMITER, get_client_ip
 
 router = APIRouter(prefix="/auth", tags=["Authentication & Team Members"])
 
 @router.post("/login", response_model=LoginResponse)
-async def login(payload: LoginRequest, db: AsyncSession = Depends(get_db)):
+async def login(request: Request, payload: LoginRequest, db: AsyncSession = Depends(get_db)):
+    client_ip = get_client_ip(request)
+    LOGIN_LIMITER.check(f"login:{client_ip}")
     stmt = select(Agent).where(Agent.username == payload.username.strip())
     user = (await db.execute(stmt)).scalars().first()
 

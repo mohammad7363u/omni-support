@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 
@@ -8,6 +8,7 @@ from app.models import SystemConfig, Agent, Site, AISettings, KnowledgeItem
 from app.schemas import SystemStatusResponse, InstallerRequest, LoginResponse
 from app.core.security import hash_password, create_access_token
 from app.config import settings
+from app.rate_limiter import INSTALL_LIMITER, get_client_ip
 
 router = APIRouter(prefix="/installer", tags=["Web Setup Wizard & Installer"])
 
@@ -37,7 +38,9 @@ async def check_installer_status(db: AsyncSession = Depends(get_db)):
     )
 
 @router.post("/install", response_model=LoginResponse)
-async def run_installer(payload: InstallerRequest, db: AsyncSession = Depends(get_db)):
+async def run_installer(request: Request, payload: InstallerRequest, db: AsyncSession = Depends(get_db)):
+    client_ip = get_client_ip(request)
+    INSTALL_LIMITER.check(f"install:{client_ip}")
     cfg = await get_or_create_config(db)
     
     # Check if already installed

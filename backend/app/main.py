@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, HTMLResponse
 from sqlalchemy import select
 
 from app.config import settings
@@ -20,6 +20,7 @@ from app.routers.installer import router as installer_router
 from app.routers.analytics import router as analytics_router
 from app.routers.canned import router as canned_router
 from app.routers.portal import router as portal_router
+from app.middleware import RequestLoggingMiddleware
 
 async def seed_initial_data():
     """Seeds default site, settings, and rich sample knowledge items."""
@@ -161,8 +162,16 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title=settings.PROJECT_NAME,
     version=settings.VERSION,
-    lifespan=lifespan
+    description="Enterprise AI-Powered Helpdesk & Ticketing Platform — TypeSafe Decision Engine, RAG Knowledge Base, Live Widget, and Frappe-inspired Workspace",
+    license_info={"name": "MIT", "url": "https://opensource.org/licenses/MIT"},
+    contact={"name": "OmniSupport Team", "url": "https://github.com/mohammad7363u/omni-support"},
+    docs_url="/docs",
+    redoc_url="/redoc",
+    openapi_url="/openapi.json",
+    lifespan=lifespan,
 )
+
+app.add_middleware(RequestLoggingMiddleware)
 
 @app.middleware("http")
 async def add_security_headers(request, call_next):
@@ -171,6 +180,7 @@ async def add_security_headers(request, call_next):
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["X-XSS-Protection"] = "1; mode=block"
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["X-Api-Version"] = settings.VERSION
     return response
 
 origins = [
@@ -257,3 +267,7 @@ async def serve_dashboard():
     if os.path.exists(index_file):
         return FileResponse(index_file)
     return {"message": "OmniSupport AI API is running. Frontend index not found."}
+
+@app.get("/healthz")
+async def healthz():
+    return {"status": "healthy", "app": settings.PROJECT_NAME, "version": settings.VERSION}

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Header, HTTPException, Depends
+from fastapi import APIRouter, Header, HTTPException, Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from typing import Optional
@@ -8,6 +8,7 @@ from app.models import Site, Conversation, Message
 from app.schemas import ExternalMessageRequest, ConversationResponse, MessageResponse
 from app.routers.chat import send_message, generate_ticket_number
 from app.schemas import MessageCreate
+from app.rate_limiter import EXTERNAL_LIMITER, get_client_ip
 
 router = APIRouter(prefix="/external", tags=["External REST API"])
 
@@ -22,13 +23,14 @@ async def get_site_by_api_key(api_key: str, db: AsyncSession) -> Site:
 
 @router.post("/tickets", response_model=dict)
 async def create_external_ticket(
+    request: Request,
     payload: ExternalMessageRequest,
     x_site_key: Optional[str] = Header(None, alias="X-Site-Key"),
     db: AsyncSession = Depends(get_db)
 ):
-    """
-    Creates or updates a ticket from external backend systems (WordPress, Laravel, Node.js, etc.).
-    """
+    """Creates or updates a ticket from external backend systems (WordPress, Laravel, Node.js, etc.)."""
+    client_ip = get_client_ip(request)
+    EXTERNAL_LIMITER.check(f"external:{client_ip}")
     if not x_site_key:
         raise HTTPException(status_code=401, detail="هدر 'X-Site-Key' الزامی است.")
     

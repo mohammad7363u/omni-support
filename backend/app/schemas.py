@@ -254,6 +254,12 @@ class TicketPriorityUpdateRequest(BaseModel):
 class TicketTagsUpdateRequest(BaseModel):
     tags: str
 
+class TicketBulkUpdateRequest(BaseModel):
+    ticket_ids: List[str]
+    status: Optional[str] = None
+    priority: Optional[str] = None
+    assigned_agent_id: Optional[str] = None
+
 class InternalNoteCreate(BaseModel):
     content: str
 
